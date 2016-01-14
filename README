@@ -6,4 +6,35 @@
   `9MMP'              \/             \/    \/        \/      \/     \/           
               v1.0 by B. de Magnienville, N. Creton & B. Karolewski
 
+
+The purpose of this project was to build a simple shell in the C or C++ programming languages.
+
+
+**************
+Requirements :
+	Distribution used : Linux Mint 17.2
+	Compiler version : gcc 4.8.4
+
+**************
+Installation :
+	In your folder, you should have 3 files : sh.cpp, a makefile and this README.
+	So, type "make" and execute the script by typing "./sh".
+	Congratulations ! You can now enjoy the great features of BombShell !
+
+**************
+Functionnalities :
+	- Execution of basic commands like "cd", "ls", "touch" or "mkdir".
+	- Execution of commands as foreground or background process groups. For example, "ls -l", "./myprog&", etc.
+	- Redirection of commands standard input and standard output. For example, " echo "hello" > x.txt ", "sort < in.txt", "ls -l > myfile", etc.
+	- Cascade pipelines commands such as "ls | sort | uniq | wc".
+	- Send SIGHUP, SIGINT (CTRL C), and SIGQUIT (CTRL \) signals to the right process groups.
+	- Exit BomberShell by typing "exit" or press "CTRL C".
+
+******
+Team :
+	- Baptiste de Magnienville
+	- Nicolas Creton
+	- Baptiste Karolewski
+
+
              
