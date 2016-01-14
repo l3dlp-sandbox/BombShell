@@ -13,6 +13,7 @@
 
 using std::cout;
 using std::endl;
+using std::string;
 using std::vector;
 using std::remove;
 
@@ -159,41 +160,46 @@ main(void)
 
 	// Read and run input commands.
 	char buf[100];
-	while(getcmd(buf, sizeof(buf)) >= 0){
-		if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-			buf[strlen(buf)-1] = 0;  // chop \n
-			if(chdir(buf+3) < 0)
+	while (getcmd(buf, sizeof(buf)) >= 0) {
+		string commands(buf, 100);
+		if (commands.find("exit") == 0) {
+			sighuphandler(); // Sends SIGHUP signal to all stored processes
+		}
+		else if (commands.find("fg") == 0) {
+			pid_t pid = pids.back();
+			if (setpgid(pid, getpgrp()) == -1) {
+				perror("setpgid");
+				exit(-1);
+			}
+		}
+		else if (commands.find("cd") == 0) {
+			buf[strlen(buf)-1] = 0; // chop \n
+			if (chdir(buf+3) < 0)
 				fprintf(stderr, "cannot cd %s\n", buf+3);
 		} else {
-			// int pid = fork1();
-			// struct cmd* cmd = parsecmd(buf);
-			// if (pid == 0)
-			// 	runcmd(cmd);
-			// wait(&pid);
-
 			struct cmd* cmd = parsecmd(buf);
 			int pid = fork1();
 			if (pid == 0) { // Child
-				if (setpgid(0, 0) == -1) {
+				if (setpgid(0, 0) == -1) { // Instantiate a new process group to run the cmd
 					perror("setpgid");
 					exit(-1);
 				}
 				if (cmd->type != '&'){
-					tcsetpgrp1(); //Commands go to foreground (for non-background commands)
+					tcsetpgrp1(); // Send foreground's cmd to foreground
 				}
 				runcmd(cmd);
 			}
 			else { // Parent
-				pids.push_back(pid); //Adds the process to the set of running processes
+				pids.push_back(pid); // Add process pid to vector
 				if (cmd->type == '&')
 					cout << "[" << pids.size() << "]" << " " << pid << endl;
 			}
 
-			if (cmd->type != '&') { //For non-background commands, wait for the command to end and set the shell to foreground process group again.
+			if (cmd->type != '&') {
 				int status;
-				if (waitpid(pid, &status, WUNTRACED) != -1){ //Waits for the process to end
-					pids.erase(remove(pids.begin(), pids.end(), pid), pids.end());
-					tcsetpgrp1(); //Shell goes back in foreground
+				if (waitpid(pid, &status, WUNTRACED) != -1) { // Awaiting end of process
+					pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
+					tcsetpgrp1(); // Put shell to foreground
 				}
 			}
 		}
@@ -215,22 +221,18 @@ void siginthandler() {
 void sigchldhandler() {
 	pid_t pid;
 	int status;
-	while((pid = waitpid(-1, &status, WNOHANG)) > 0){ //Retrieves the exitted child pid
-		pids.erase(remove(pids.begin(), pids.end(), pid), pids.end());
-	};
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) { // Iterate over all the closed processes
+		pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
+	}
 }
 
 void sighuphandler() {
 	for (int i = 0; i < pids.size(); i++) {
 		int pid = pids[i];
 		if (pid > 0 && getpgid(pid) > 0)
-			kill(pid, SIGHUP);
+			kill(pid, SIGHUP); // Send SIGUP to all stored process
 	}
-	// for(vector<int>::iterator it = pids.begin(); it != pids.end(); ++it) {
-	// 	if (*it > 0 && getpgid(*it) > 0)
-	// 		kill(*it,SIGHUP); //Sends the SIGHUP to all running process groups
-	// }
-	pids.clear(); //Resets the pid set (array of running process groups ids) : All processes were normally killed by the SIGHUP signal
+	pids.clear(); // Empty the pid vector
 	exit(0);
 }
 
