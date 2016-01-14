@@ -140,10 +140,11 @@ main(void)
       if(chdir(buf+3) < 0)
         fprintf(stderr, "cannot cd %s\n", buf+3);
     } else {
-        int pid = fork1();
-        if(pid == 0)
-            runcmd(parsecmd(buf));
-        wait(&pid);
+      int pid = fork1();
+      struct cmd* cmd = parsecmd(buf);
+      if(pid == 0)
+        runcmd(cmd);
+      wait(&pid);
     }
   }
 
@@ -283,7 +284,7 @@ parsecmd(char *s)
 
   es = s + strlen(s);
   cmd = parseline(&s, es);
-  peek(&s, es, "");
+  peek(&s, es, (char*)"");
   if(s != es){
     fprintf(stderr, "leftovers: %s\n", s);
     exit(-1);
@@ -305,7 +306,7 @@ parsepipe(char **ps, char *es)
   struct cmd *cmd;
 
   cmd = parseexec(ps, es);
-  if(peek(ps, es, "|")){
+  if(peek(ps, es, (char*)"|")){
     gettoken(ps, es, 0, 0);
     cmd = pipecmd(cmd, parsepipe(ps, es));
   }
@@ -318,7 +319,7 @@ parseredirs(struct cmd *cmd, char **ps, char *es)
   int tok;
   char *q, *eq;
 
-  while(peek(ps, es, "<>")){
+  while(peek(ps, es, (char*)"<>")){
     tok = gettoken(ps, es, 0, 0);
     if(gettoken(ps, es, &q, &eq) != 'a') {
       fprintf(stderr, "missing file for redirection\n");
@@ -349,7 +350,7 @@ parseexec(char **ps, char *es)
 
   argc = 0;
   ret = parseredirs(ret, ps, es);
-  while(!peek(ps, es, "|")){
+  while(!peek(ps, es, (char*)"|")){
     if((tok=gettoken(ps, es, &q, &eq)) == 0)
       break;
     if(tok != 'a') {
