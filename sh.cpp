@@ -125,13 +125,13 @@ getcmd(char *buf, int nbuf)
 int
 main(void)
 {
-  cout << KNRM"              __________              ___.     "KYEL"_________.__           .__  .__  " << endl;
-  cout << KYEL"       ,--.!, "KNRM"\\______   \\ ____   _____\\_ |__ "KYEL" /   _____/|  |__   ____ |  | |  |  " << endl;
-  cout << KYEL"    __/   -*-  "KNRM"|    |  _//  _ \\ /     \\| __ \\ "KYEL"\\_____  \\ |  |  \\_/ __ \\|  | |  |  " << endl;
-  cout << KYEL"  ,d08b.  '|`  "KNRM"|    |   (  <_> )  Y Y  \\ \\_\\ \\"KYEL"/        \\|   Y  \\  ___/|  |_|  |__" << endl;
-  cout << KYEL"  0088MM       "KNRM"|______  /\\____/|__|_|  /___  /"KYEL"_______  /|___|  /\\___  >____/____/" << endl;
-  cout << KYEL"  `9MMP'       "KNRM"       \\/             \\/    \\/   "KYEL"     \\/      \\/     \\/           "KNRM << endl;
-  cout << KYEL"              v1.0 by "KNRM"B. de Magnienville, "KYEL"N. Creton & "KNRM"B. Karolewski "KNRM << endl;
+  cout << KNRM "              __________              ___.     " KYEL "_________.__           .__  .__  " << endl;
+  cout << KYEL "       ,--.!, " KNRM "\\______   \\ ____   _____\\_ |__ " KYEL " /   _____/|  |__   ____ |  | |  |  " << endl;
+  cout << KYEL "    __/   -*-  " KNRM "|    |  _//  _ \\ /     \\| __ \\ " KYEL "\\_____  \\ |  |  \\_/ __ \\|  | |  |  " << endl;
+  cout << KYEL "  ,d08b.  '|`  " KNRM "|    |   (  <_> )  Y Y  \\ \\_\\ \\" KYEL "/        \\|   Y  \\  ___/|  |_|  |__" << endl;
+  cout << KYEL "  0088MM       " KNRM "|______  /\\____/|__|_|  /___  /" KYEL "_______  /|___|  /\\___  >____/____/" << endl;
+  cout << KYEL "  `9MMP'       " KNRM "       \\/             \\/    \\/   " KYEL "     \\/      \\/     \\/           " KNRM << endl;
+  cout << KYEL "              v1.0 by " KNRM "B. de Magnienville, " KYEL "N. Creton & " KNRM "B. Karolewski " KNRM << endl;
   // Read and run input commands.
   char buf[100];
   while(getcmd(buf, sizeof(buf)) >= 0){
