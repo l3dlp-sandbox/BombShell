@@ -28,7 +28,7 @@ Functionnalities :
 	- Redirection of commands standard input and standard output. For example, " echo "hello" > x.txt ", "sort < in.txt", "ls -l > myfile", etc.
 	- Cascade pipelines commands such as "ls | sort | uniq | wc".
 	- Send SIGHUP, SIGINT (CTRL C), and SIGQUIT (CTRL \) signals to the right process groups.
-	- Exit BomberShell by typing "exit" or press "CTRL C".
+	- Exit BomberShell by typing "exit" (whick kills all the processes) or press "CTRL C".
 
 ******
 Team :
