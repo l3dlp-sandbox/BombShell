@@ -53,12 +53,12 @@ struct pipecmd {
 };
 
 struct bgcmd {
-	int type;
-	struct cmd *cmd;
+	int type;          // &
+	struct cmd *cmd;   // the command to be run in background (e.g., an execcmd)
 };
 
 int fork1(void);  // Fork but exits on failure.
-void tcsetpgrp1();  // tcsetprgp but exits on failure.
+void tcsetpgrp1();  // tcsetpgrp but exits on failure.
 void sigquithandler();
 void siginthandler();
 void sigchldhandler();
@@ -142,21 +142,52 @@ getcmd(char *buf, int nbuf)
 }
 
 const char* getprocessnamebypid(const int pid) {
-		char* name = (char*)calloc(1024,sizeof(char));
-		if(name){
-				sprintf(name, "/proc/%d/cmdline",pid);
-				FILE* f = fopen(name,"r");
-				if(f){
-						size_t size;
-						size = fread(name, sizeof(char), 1024, f);
-						if(size>0){
-								if('\n'==name[size-1])
-										name[size-1]='\0';
-						}
-						fclose(f);
-				}
+	char* name = (char*)calloc(1024,sizeof(char));
+	if (name) {
+		sprintf(name, "/proc/%d/cmdline",pid);
+		FILE* f = fopen(name,"r");
+		if (f) {
+			size_t size;
+			size = fread(name, sizeof(char), 1024, f);
+			if (size > 0) {
+				if ('\n' == name[size-1])
+					name[size-1] = '\0';
+			}
+			fclose(f);
 		}
-		return name;
+	}
+	return name;
+}
+
+int checkstp(int pid) {
+  FILE *fp;
+  char path[1035];
+  sprintf(path, "cat /proc/%d/status | grep State", pid);
+  fp = popen(path, "r"); // Open the command for reading
+  if (fp == NULL) {
+    printf("Failed to run command\n");
+    exit(-1);
+  }
+
+  // while (fgets(path, sizeof(path) - 1, fp) != NULL) { // Read the output a line at a time - output it
+    // printf("%s", path);
+  // }
+  // if (fgets(path, sizeof(path) - 1, fp) == NULL) {
+  // 	printf("fgets error\n");
+  // }
+
+  fgets(path, sizeof(path) - 1, fp);
+
+  cout << path << endl;
+
+  // State:	T (stopped)
+  string output(path, 100);
+  if (output == "State:	T (stopped)") {
+  	
+  }
+
+  pclose(fp);
+  return 0;
 }
 
 int
@@ -181,7 +212,14 @@ main(void)
 	while (getcmd(buf, sizeof(buf)) >= 0) {
 		string commands(buf, 100);
 		if (commands.find("exit") == 0) {
+			cout << KYEL "  ,-* " << KNRM "All background processes have been killed" <<  endl;
+			cout << KYEL " (_)  " << KYEL "The BSH team hope you had a good experience" KNRM << endl;
 			sighuphandler(); // Sends SIGHUP signal to all stored processes
+		}
+		else if (commands.find("help") == 0) { // Handle help command
+			cout << "GNU bsh, version 1.0.00(1)-release (x86_64-pc-linux-gnu)" << endl;
+			cout << "These shell commands are defined internally.  Type `help' to see this list." << endl;
+
 		}
 		else if (commands.find("listbg") == 0) { // Handle listbg command
 			for (int i = 0; i < pids.size(); i++) {
@@ -194,15 +232,19 @@ main(void)
 		}
 		else if (commands.find("fg") == 0) { // Handle fg command
 			pid_t pid = pids.back();
-			signal(SIGCHLD, NULL);
-			if (tcsetpgrp(STDIN_FILENO, getpgid(pid)) == -1) {
+			kill(pid, SIGCONT); // Send SIGCONT to resume the process
+			if (tcsetpgrp(STDIN_FILENO, getpgid(pid)) == -1) { // Put the last backgrounded process to foreground
 				perror("tcsetpgrp");
 				exit(-1);
 			}
+			pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from background list
+			cout << KNRM "Process " KYEL << getprocessnamebypid(pid) << " (" << pid << ")" << KNRM " sent to foreground" << endl; // Display the process name going into foreground
 			if (waitpid(pid, NULL, 0) != -1) { // Awaiting end of process
-				cout << "process terminated" << endl;
+				cout << " Terminate" << endl;
 				tcsetpgrp1(); // Put shell to foreground
 			}
+		} else if (commands.find("bg") == 0) { // Handle bg command
+			cout << "bg not implemented" << endl;
 		} else if (commands.find("cd") == 0) {
 			buf[strlen(buf)-1] = 0; // chop \n
 			if (chdir(buf+3) < 0)
@@ -227,7 +269,10 @@ main(void)
 			}
 
 			if (cmd->type != '&') {
-				if (waitpid(pid, NULL, WUNTRACED) != -1) { // Awaiting end of process
+				int status;
+				if (waitpid(pid, &status, WUNTRACED) != -1) { // Awaiting end of process
+					// cout << " terminated (" << status << ")" << endl;
+					checkstp(pid);
 					pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
 					tcsetpgrp1(); // Put shell to foreground
 				}
@@ -239,12 +284,12 @@ main(void)
 }
 
 void sigquithandler() {
-	cout << " Terminate (core dump)" << endl;
+	cout << " Received signal 3" << endl;
 	cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void siginthandler() {
-	cout << " Terminate" << endl;
+	cout << " Received signal 2" << endl;
 	cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
@@ -262,7 +307,6 @@ void sighuphandler() {
 		if (pid > 0 && getpgid(pid) > 0)
 			kill(pid, SIGHUP); // Send SIGUP to all stored process
 	}
-	pids.clear(); // Empty the pid vector
 	exit(0);
 }
 
