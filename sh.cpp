@@ -141,6 +141,24 @@ getcmd(char *buf, int nbuf)
 	return 0;
 }
 
+const char* get_process_name_by_pid(const int pid) {
+    char* name = (char*)calloc(1024,sizeof(char));
+    if(name){
+        sprintf(name, "/proc/%d/cmdline",pid);
+        FILE* f = fopen(name,"r");
+        if(f){
+            size_t size;
+            size = fread(name, sizeof(char), 1024, f);
+            if(size>0){
+                if('\n'==name[size-1])
+                    name[size-1]='\0';
+            }
+            fclose(f);
+        }
+    }
+    return name;
+}
+
 int
 main(void)
 {
@@ -165,11 +183,13 @@ main(void)
 		if (commands.find("exit") == 0) {
 			sighuphandler(); // Sends SIGHUP signal to all stored processes
 		}
-		else if (commands.find("fg") == 0) {
-			pid_t pid = pids.back();
-			if (setpgid(pid, getpgrp()) == -1) {
-				perror("setpgid");
-				exit(-1);
+		else if (commands.find("jobs") == 0) {
+			for (int i = 0; i < pids.size(); i++) {
+				int pid = pids[i];
+				int gpid = getpgid(pid);
+				if (pid > 0 && gpid > 0) {
+					cout << "[" << i << "] " << pid << " " << gpid << " " << get_process_name_by_pid(pid) << endl;
+				}
 			}
 		}
 		else if (commands.find("cd") == 0) {
