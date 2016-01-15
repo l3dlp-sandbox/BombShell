@@ -19,13 +19,7 @@ using std::remove;
 
 #define MAXARGS 10
 #define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
 #define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
 
 // All commands have at least a type. Have looked at the type, the code
 // typically casts the *cmd to some specific cmd type.
@@ -44,6 +38,7 @@ struct redircmd {
 	char *file;        // the input/output file
 	int mode;          // the mode to open the file with
 	int fd;            // the file descriptor number to use for the file
+	int permissions;   // the permission set to the file
 };
 
 struct pipecmd {
@@ -90,7 +85,9 @@ runcmd(struct cmd *cmd)
 		case '>':
 		case '<': {
 			struct redircmd *rcmd = (struct redircmd*) cmd;
-			int fd = open(rcmd->file, rcmd->mode);
+			int fd;
+			if ((fd = open(rcmd->file, rcmd->mode, rcmd->permissions)) < 0) // Modified to open the file with the right permissions
+				fprintf(stderr, "cannot open %s\n", rcmd->file);
 			dup2(fd, rcmd->fd);
 			runcmd(rcmd->cmd);
 			break;
@@ -141,7 +138,7 @@ getcmd(char *buf, int nbuf)
 	return 0;
 }
 
-const char* getprocessnamebypid(const int pid) {
+const char* getprocessnamebypid(const int pid) { // Return the process name of the given process id
 	char* name = (char*)calloc(1024,sizeof(char));
 	if (name) {
 		sprintf(name, "/proc/%d/cmdline",pid);
@@ -159,35 +156,30 @@ const char* getprocessnamebypid(const int pid) {
 	return name;
 }
 
-int checkstp(int pid) {
-  FILE *fp;
-  char path[1035];
-  sprintf(path, "cat /proc/%d/status | grep State", pid);
-  fp = popen(path, "r"); // Open the command for reading
-  if (fp == NULL) {
-    printf("Failed to run command\n");
-    exit(-1);
-  }
+int checktstp(int pid) { // Check if the given process id is in stopped state
+	char path2[1035];
+	sprintf(path2, "/proc/%d", pid);
+	struct stat sts;
+    if (stat(path2, &sts) == -1) { // check if pid still running
+		return 0;
+	}
+    FILE *fp;
+    char path[1035];
+    sprintf(path, "cat /proc/%d/status | grep State", pid);
+    fp = popen(path, "r"); // Open the command for reading
+    if (fp == NULL) {
+    	printf("Failed to run command\n");
+    	exit(-1);
+    }
 
-  // while (fgets(path, sizeof(path) - 1, fp) != NULL) { // Read the output a line at a time - output it
-    // printf("%s", path);
-  // }
-  // if (fgets(path, sizeof(path) - 1, fp) == NULL) {
-  // 	printf("fgets error\n");
-  // }
+    fgets(path, sizeof(path) - 1, fp);
+    pclose(fp);
 
-  fgets(path, sizeof(path) - 1, fp);
-
-  cout << path << endl;
-
-  // State:	T (stopped)
-  string output(path, 100);
-  if (output == "State:	T (stopped)") {
-  	
-  }
-
-  pclose(fp);
-  return 0;
+    string output(path, 100);
+    if (output.find("T (stopped)") != std::string::npos) {
+		return 1;
+    }
+    return 0;
 }
 
 int
@@ -199,7 +191,7 @@ main(void)
 	cout << KYEL "  ,d08b.  '|`  " KNRM "|    |   (  <_> )  Y Y  \\ \\_\\ \\" KYEL "/        \\|   Y  \\  ___/|  |_|  |__" << endl;
 	cout << KYEL "  0088MM       " KNRM "|______  /\\____/|__|_|  /___  /" KYEL "_______  /|___|  /\\___  >____/____/" << endl;
 	cout << KYEL "  `9MMP'       " KNRM "       \\/             \\/    \\/   " KYEL "     \\/      \\/     \\/           " KNRM << endl;
-	cout << KYEL "              v1.0 by " KNRM "B. de Magnienville, " KYEL "N. Creton & " KNRM "B. Karolewski " KNRM << endl;
+	cout << KYEL "              v1.0 by " KNRM "Annihil " KYEL "& " KNRM "Dziter " KNRM << endl;
 
 	signal(SIGQUIT, (__sighandler_t) sigquithandler);
 	signal(SIGINT, (__sighandler_t) siginthandler);
@@ -217,11 +209,23 @@ main(void)
 			sighuphandler(); // Sends SIGHUP signal to all stored processes
 		}
 		else if (commands.find("help") == 0) { // Handle help command
-			cout << "GNU bsh, version 1.0.00(1)-release (x86_64-pc-linux-gnu)" << endl;
-			cout << "These shell commands are defined internally.  Type `help' to see this list." << endl;
-
+			cout << KYEL "&       - " << KNRM "If added after your command, runs the process in background." <<  endl;
+			cout << KYEL "bg      - " << KNRM "Put last executed process in background." <<  endl;
+			cout << KYEL "fg      - " << KNRM "Put last executed process in foreground." <<  endl;
+			cout << KYEL "killjob - " << KNRM "Stop a background process using its id in jobs." <<  endl;
+			cout << KYEL "jobs    - " << KNRM "Display the processes currently in background with pid, pgid and program's name." <<  endl;
 		}
-		else if (commands.find("listbg") == 0) { // Handle listbg command
+		else if (commands.find("killjob") == 0) { // Handle killjob command
+			string idstr = commands.substr(7, commands.length()); // Retrieve the index
+			int id = atoi(idstr.c_str());
+			if (id < 0 || id >= pids.size()) {
+				cout << "index out of bound" << endl;
+				break;
+			}
+			pid_t pid = pids[id];
+			kill(pid, SIGKILL); // Kill the selected procress by sending SIGKILL to it
+		}
+		else if (commands.find("jobs") == 0) { // Handle jobs command
 			for (int i = 0; i < pids.size(); i++) {
 				int pid = pids[i];
 				int gpid = getpgid(pid);
@@ -244,7 +248,8 @@ main(void)
 				tcsetpgrp1(); // Put shell to foreground
 			}
 		} else if (commands.find("bg") == 0) { // Handle bg command
-			cout << "bg not implemented" << endl;
+			pid_t pid = pids.back();
+			kill(pid, SIGCONT); // Send SIGCONT to resume the stopped process
 		} else if (commands.find("cd") == 0) {
 			buf[strlen(buf)-1] = 0; // chop \n
 			if (chdir(buf+3) < 0)
@@ -271,9 +276,11 @@ main(void)
 			if (cmd->type != '&') {
 				int status;
 				if (waitpid(pid, &status, WUNTRACED) != -1) { // Awaiting end of process
-					// cout << " terminated (" << status << ")" << endl;
-					checkstp(pid);
-					pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
+					if (checktstp(pid)) { // Check if procress stopped (with SIGTSTP)
+						cout << " Stopped process " << pid << " stored to background list" << endl;
+					} else {
+						pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process id from the background pid list
+					}
 					tcsetpgrp1(); // Put shell to foreground
 				}
 			}
@@ -297,7 +304,7 @@ void sigchldhandler() {
 	pid_t pid;
 	int status;
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) { // Iterate over all the closed processes
-		pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
+		pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process id from the background pid list
 	}
 }
 
@@ -355,6 +362,7 @@ redircmd(struct cmd *subcmd, char *file, int type)
 	cmd->file = file;
 	cmd->mode = (type == '<') ?  O_RDONLY : O_WRONLY|O_CREAT|O_TRUNC;
 	cmd->fd = (type == '<') ? 0 : 1;
+	cmd->permissions = S_IREAD|S_IWRITE;
 	return (struct cmd*)cmd;
 }
 
