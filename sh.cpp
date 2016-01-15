@@ -230,12 +230,12 @@ main(void)
 
 void sigquithandler() {
 	cout << " Terminate (core dump)" << endl;
-  cout << endl << KYEL "bsh" << KNRM "> " << std::flush;
+  cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void siginthandler() {
 	cout << " Terminate" << endl;
-  cout << endl << KYEL "bsh" << KNRM "> " << std::flush;
+  cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void sigchldhandler() {
