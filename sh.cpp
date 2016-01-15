@@ -133,7 +133,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-	printf("$ ");
+  cout << KYEL "bsh" << KNRM "> ";
 	memset(buf, 0, nbuf);
 	fgets(buf, nbuf, stdin);
 	if(buf[0] == 0) // EOF
@@ -141,7 +141,7 @@ getcmd(char *buf, int nbuf)
 	return 0;
 }
 
-const char* get_process_name_by_pid(const int pid) {
+const char* getprocessnamebypid(const int pid) {
     char* name = (char*)calloc(1024,sizeof(char));
     if(name){
         sprintf(name, "/proc/%d/cmdline",pid);
@@ -183,12 +183,12 @@ main(void)
 		if (commands.find("exit") == 0) {
 			sighuphandler(); // Sends SIGHUP signal to all stored processes
 		}
-		else if (commands.find("jobs") == 0) {
+		else if (commands.find("listbg") == 0) {
 			for (int i = 0; i < pids.size(); i++) {
 				int pid = pids[i];
 				int gpid = getpgid(pid);
 				if (pid > 0 && gpid > 0) {
-					cout << "[" << i << "] " << pid << " " << gpid << " " << get_process_name_by_pid(pid) << endl;
+					cout << KNRM "[" << i << "] " << KYEL << pid << KNRM " " << gpid << KYEL " " << getprocessnamebypid(pid) << KNRM << endl;
 				}
 			}
 		}
@@ -230,12 +230,12 @@ main(void)
 
 void sigquithandler() {
 	cout << " Terminate (core dump)" << endl;
-	cout << endl << "$ " << std::flush;
+  cout << endl << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void siginthandler() {
 	cout << " Terminate" << endl;
-	cout << endl << "$ " << std::flush;
+  cout << endl << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void sigchldhandler() {
