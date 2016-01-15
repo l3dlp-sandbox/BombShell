@@ -133,7 +133,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  cout << KYEL "bsh" << KNRM "> ";
+	cout << KYEL "bsh" << KNRM "> ";
 	memset(buf, 0, nbuf);
 	fgets(buf, nbuf, stdin);
 	if(buf[0] == 0) // EOF
@@ -142,21 +142,21 @@ getcmd(char *buf, int nbuf)
 }
 
 const char* getprocessnamebypid(const int pid) {
-    char* name = (char*)calloc(1024,sizeof(char));
-    if(name){
-        sprintf(name, "/proc/%d/cmdline",pid);
-        FILE* f = fopen(name,"r");
-        if(f){
-            size_t size;
-            size = fread(name, sizeof(char), 1024, f);
-            if(size>0){
-                if('\n'==name[size-1])
-                    name[size-1]='\0';
-            }
-            fclose(f);
-        }
-    }
-    return name;
+		char* name = (char*)calloc(1024,sizeof(char));
+		if(name){
+				sprintf(name, "/proc/%d/cmdline",pid);
+				FILE* f = fopen(name,"r");
+				if(f){
+						size_t size;
+						size = fread(name, sizeof(char), 1024, f);
+						if(size>0){
+								if('\n'==name[size-1])
+										name[size-1]='\0';
+						}
+						fclose(f);
+				}
+		}
+		return name;
 }
 
 int
@@ -183,7 +183,7 @@ main(void)
 		if (commands.find("exit") == 0) {
 			sighuphandler(); // Sends SIGHUP signal to all stored processes
 		}
-		else if (commands.find("listbg") == 0) {
+		else if (commands.find("listbg") == 0) { // Handle listbg command
 			for (int i = 0; i < pids.size(); i++) {
 				int pid = pids[i];
 				int gpid = getpgid(pid);
@@ -192,7 +192,18 @@ main(void)
 				}
 			}
 		}
-		else if (commands.find("cd") == 0) {
+		else if (commands.find("fg") == 0) { // Handle fg command
+			pid_t pid = pids.back();
+			signal(SIGCHLD, NULL);
+			if (tcsetpgrp(STDIN_FILENO, getpgid(pid)) == -1) {
+				perror("tcsetpgrp");
+				exit(-1);
+			}
+			if (waitpid(pid, NULL, 0) != -1) { // Awaiting end of process
+				cout << "process terminated" << endl;
+				tcsetpgrp1(); // Put shell to foreground
+			}
+		} else if (commands.find("cd") == 0) {
 			buf[strlen(buf)-1] = 0; // chop \n
 			if (chdir(buf+3) < 0)
 				fprintf(stderr, "cannot cd %s\n", buf+3);
@@ -216,8 +227,7 @@ main(void)
 			}
 
 			if (cmd->type != '&') {
-				int status;
-				if (waitpid(pid, &status, WUNTRACED) != -1) { // Awaiting end of process
+				if (waitpid(pid, NULL, WUNTRACED) != -1) { // Awaiting end of process
 					pids.erase(remove(pids.begin(), pids.end(), pid), pids.end()); // Removing process pid from vector
 					tcsetpgrp1(); // Put shell to foreground
 				}
@@ -230,12 +240,12 @@ main(void)
 
 void sigquithandler() {
 	cout << " Terminate (core dump)" << endl;
-  cout << KYEL "bsh" << KNRM "> " << std::flush;
+	cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void siginthandler() {
 	cout << " Terminate" << endl;
-  cout << KYEL "bsh" << KNRM "> " << std::flush;
+	cout << KYEL "bsh" << KNRM "> " << std::flush;
 }
 
 void sigchldhandler() {

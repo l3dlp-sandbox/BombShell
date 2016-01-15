@@ -27,8 +27,9 @@ Functionnalities :
 	- Execution of commands as foreground or background process groups. For example, "ls -l", "./myprog&", etc.
 	- Redirection of commands standard input and standard output. For example, " echo "hello" > x.txt ", "sort < in.txt", "ls -l > myfile", etc.
 	- Cascade pipelines commands such as "ls | sort | uniq | wc".
-	- Send SIGHUP, SIGINT (CTRL C), and SIGQUIT (CTRL \) signals to the right process groups.
-	- Exit BomberShell by typing "exit" (whick kills all the processes) or press "CTRL C".
+	- Send SIGHUP, SIGINT (CTRL+C), and SIGQUIT (CTRL+\) signals to the right process groups.
+	- List background processes with the command "listbg".
+	- Exit BomberShell by typing "exit" (whick kills all the processes) or press "CTRL+D".
 
 ******
 Team :
